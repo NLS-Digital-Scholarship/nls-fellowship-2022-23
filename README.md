@@ -13,7 +13,8 @@ To copy and work with the Jupyter Notebooks on your own machine, see [Setup](#se
 - [Setup](#setup)
 - [Suggested Citations](#suggested-citations)
 - [Moving Image Archive](#moving-image-archive)
-- [National Bibliography of Scotland](#national-bibliography-of-scotland)
+- [National Bibliography of Scotland and BOSLIT](#national-bibliography-of-scotland-and-boslit)
+- [Data quality assessment](#data-quality-assessment)
 - [References](#references)
 
 ## Datasets
@@ -30,6 +31,12 @@ To copy and work with the Jupyter Notebooks on your own machine, see [Setup](#se
 - Website: Visit the [NLS Data Foundry](https://data.nls.uk/data/metadata-collections/national-bibliography-of-scotland/)
 - DOI: https://doi.org/10.34812/7cda-ep21
 - Date created: 2022
+- Licence: Creative Commons Attribution 4.0 International ([CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/))
+
+### Collection 3: Bibliography of Scottish Literature in Translation (BOSLIT)
+- Owner: National Library of Scotland
+- Creator: National Library of Scotland
+- Website: Visit the [NLS Data Foundry](https://data.nls.uk/data/metadata-collections/boslit/)
 - Licence: Creative Commons Attribution 4.0 International ([CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/))
 
 
@@ -143,30 +150,7 @@ WHERE {
 } GROUP BY ?r ?rLabel ?img
 ```
 
-### Data quality assessment
-The RDF dataset has been assessed by means of SPARQL in several ways. For instance, counting the number of resources per type (e.g., person, organizatioonn, video, etc.) and comparing the results against the original sources. In addition, an innovative method to assess RDF repositories has been used based on [Shape Expressions (ShEx)](https://shexspec.github.io/primer/), a language for describing RDF graph structures. A ShEx schema describes constraints that RDF data graphs must meet in order to be considered conformant. A [ShEx schema](/shex/) has been created to describe the resources stored in the final RDF dataset.
-
-```
-shex:VideoObject
-{
-   rdf:type  [schema:VideoObject]  ;                           # 100.0 %
-   dc:identifier  IRI  ;                                       # 100.0 %
-   schema:sourceOrganization  IRI  ;                           # 100.0 %
-   schema:identifier  IRI  ;                                   # 100.0 %
-   schema:duration  xsd:string  ?;
-            # 99.99514751552795 % obj: xsd:string. Cardinality: {1}
-   schema:abstract  xsd:string  ?;
-            # 99.85927795031056 % obj: xsd:string. Cardinality: {1}
-   schema:name  xsd:string  ?;
-            # 99.34006211180125 % obj: xsd:string. Cardinality: {1}
-   dc:title  xsd:string  ?;
-            # 99.34006211180125 % obj: xsd:string. Cardinality: {1}
-   schema:videoQuality  xsd:string  ?
-            # 98.3113354037267 % obj: xsd:string. Cardinality: {1}
-}
-```
-
-## National Bibliography of Scotland
+## National Bibliography of Scotland and BOSLIT
 
 The transformation process is based on the tool [marc2bibframe](https://github.com/lcnetdev/marc2bibframe2) that uses BIBFRAME as main vocabulary to describe the resources.
 
@@ -175,7 +159,7 @@ The transformation process is based on the tool [marc2bibframe](https://github.c
 The original metadata described in MARCXML is automatically transformed into BIBFRAME using the XSLT template provided by the tool [marc2bibframe2](https://github.com/lcnetdev/marc2bibframe2). Each record provided in the original dataset is extracted using a [Python script](scripts/Marc2bibframe.py). The final RDF dataset can be generated and queried using as RDF storage system the [TDB2 Apache Jena component](https://jena.apache.org/documentation/tdb2/) provided in this [Java project](https://github.com/hibernator11/nls-jena-tdb). In order to run the Java project, an [Apache Maven installation](https://maven.apache.org/install.html) is required.
 
 ### Generating the RDF
-In order to generate the RDF we need to download the dataset from the [Data Foundry](https://data.nls.uk/data/metadata-collections/national-bibliography-of-scotland/. In addition, we need to download the [marc2bibframe2](https://github.com/lcnetdev/marc2bibframe2).
+In order to generate the RDF we need to download the datasets from the [Data Foundry](https://data.nls.uk/data/metadata-collections/national-bibliography-of-scotland/). In addition, we need to download the [marc2bibframe2](https://github.com/lcnetdev/marc2bibframe2).
 
 Then, we need to setup the paths in the [Python script Marc2bibframe](scripts/Marc2bibframe.py):
 
@@ -184,7 +168,7 @@ import lxml.etree as lxml
 import xml.etree.cElementTree as ET
 from xml.etree import ElementTree
 
-ET.register_namespace('marc',"http://www.loc.gov/MARC21/slim") #some name
+ET.register_namespace('marc',"http://www.loc.gov/MARC21/slim")
 
 # add the path to the dataset 
 filename = "../data/nls-nbs-v2/NBS_v2_validated_marcxml.xml"
@@ -220,10 +204,14 @@ The data modelling is based on [BIBFRAME](https://www.loc.gov/bibframe/) as main
 
 <img src="images/data-model-nbs.png">
 
-### Loading the RDF
-In order to store the RDF and be able to query the information, a [Jena TDB RDF storage system](https://jena.apache.org/documentation/tdb2/) has been used. A [Java project](https://github.com/hibernator11/nls-jena-tdb) has been created in order to identify the classes and properties based on BIBFRAME.
+Uniform titles (e.g., 130 and 240 MARC fields) are processed in order to create a bf:Hub resource including the title (240 $a), language (240 $l) and main author (100 $a).
 
-The following example of SPARQL query shows how to query the RDF dataset in order to identify works written by authors containing the label Stevenson, Robert Louis:
+<img src="images/bf-hub.png">
+
+### Loading the RDF
+In order to store the RDF and be able to query the information, a [Jena TDB RDF storage system](https://jena.apache.org/documentation/tdb2/) was used. A [Java project](https://github.com/hibernator11/nls-jena-tdb) was created in order to identify the classes and properties based on BIBFRAME.
+
+The following example of SPARQL query shows how to query the RDF dataset in order to identify works written by authors containing the label *Stevenson, Robert Louis*:
 
 ```
 PREFIX bf:<http://id.loc.gov/ontologies/bibframe/> 
@@ -236,6 +224,98 @@ WHERE {
 FILTER regex(str(?a), "http://") 
 FILTER regex(str(?label), "Stevenson, Robert Louis") 
 } LIMIT 10
+```
+
+## Data quality assessment
+The RDF datasets has been assessed by means of SPARQL in several ways using a data quality criteria (e.g., timeliness, completeness, accuracy, consistency, interlinking, etc.). In addition, an innovative method to assess RDF repositories has been used based on [Shape Expressions (ShEx)](https://shexspec.github.io/primer/), a language for describing RDF graph structures. A ShEx schema describes constraints that RDF data graphs must meet in order to be considered conformant. ShEx schemas define the node constraints to assess the triples found in an RDF dataset. 
+
+A collection of [ShEx schemas](/shex/) has been created to describe and assess the resources stored in the final RDF datasets:
+
+- [Moving Image Archive](/shex/shaper_mia.shex): a ShEx schema has been generated for the main class schema:VideoObject.
+
+```
+shex:VideoObject
+{
+   rdf:type  [schema:VideoObject]  ;                           # 100.0 %
+   dc:identifier  IRI  ;                                       # 100.0 %
+   schema:sourceOrganization  IRI  ;                           # 100.0 %
+   schema:identifier  IRI  ;                                   # 100.0 %
+   schema:duration  xsd:string  ?;
+            # 99.99514751552795 % obj: xsd:string. Cardinality: {1}
+   schema:abstract  xsd:string  ?;
+            # 99.85927795031056 % obj: xsd:string. Cardinality: {1}
+   schema:name  xsd:string  ?;
+            # 99.34006211180125 % obj: xsd:string. Cardinality: {1}
+   dc:title  xsd:string  ?;
+            # 99.34006211180125 % obj: xsd:string. Cardinality: {1}
+   schema:videoQuality  xsd:string  ?
+            # 98.3113354037267 % obj: xsd:string. Cardinality: {1}
+}
+```
+
+- [National Bibliography of Scotland & BOSLIT ](/shex/shaper_bibframe.shex): ShEx schemas habe been generated for the classes bibframe:Agent and bibframe:Work.
+
+```
+shex:Work
+{
+   rdf:type  [bibframe:Work]  ;                                # 100.0 %
+   bibframe:title  xsd:string  +;                              # 100.0 %
+            # 97.56637168141593 % obj: xsd:string. Cardinality: {1}
+   bibframe:hasInstance  IRI  ?;
+            # 87.61061946902655 % obj: IRI. Cardinality: {1}
+   bibframe:contribution  xsd:string  *;
+            # 86.72566371681415 % obj: xsd:string. Cardinality: +
+   rdf:type  [bibframe:Text]  ?;
+            # 81.85840707964603 % obj: bibframe:Text. Cardinality: {1}
+   bibframe:adminMetadata  xsd:string  ?;
+            # 81.85840707964603 % obj: xsd:string. Cardinality: {1}
+   bibframe:content  IRI  ?;
+            # 81.85840707964603 % obj: IRI. Cardinality: {1}
+   bibframe:language  IRI  ?;
+            # 81.85840707964603 % obj: IRI. Cardinality: {1}
+   rdf:type  [bibframe:Monograph]  ?;
+            # 81.63716814159292 % obj: bibframe:Monograph. Cardinality: {1}
+   bibframe:subject  IRI  *;
+            # 81.19469026548673 % obj: IRI. Cardinality: +
+   bibframe:language  xsd:string  *;
+            # 80.97345132743364 % obj: xsd:string. Cardinality: +
+   bibframe:note  xsd:string  *
+            # 80.75221238938053 % obj: xsd:string. Cardinality: +
+}
+```
+
+The ShEx schemas has been automatically generated using the tool [sheXer](https://github.com/DaniFdezAlvarez/shexer/). The following example shows how to create the ShEx schemas for the classes `bibframe:Agent` and `bibframe:Work` using as input 500 instances and with a threshold of tolerance value of 0.8 (the minimun percentage of nodes that should conform with a constraint c):
+
+```
+from shexer.shaper import Shaper
+from shexer.consts import NT, SHEXC, SHACL_TURTLE, TURTLE
+
+target_classes = [
+    "http://id.loc.gov/ontologies/bibframe/Agent",
+    "http://id.loc.gov/ontologies/bibframe/Work"
+]
+
+namespaces_dict = {"http://www.w3.org/1999/02/22-rdf-syntax-ns#": "rdf",
+                   "http://example.org/": "ex",
+                   "http://weso.es/shapes/": "",
+                   "http://www.w3.org/2001/XMLSchema#": "xsd",
+                   "http://id.loc.gov/ontologies/bibframe/":"bibframe",
+                   "http://id.loc.gov/ontologies/bflc/":"bflc"
+                   }
+
+shaper = Shaper(target_classes=target_classes,
+                url_endpoint="http://localhost:3330/rdf/sparql",
+                limit_remote_instances=500,
+                namespaces_dict=namespaces_dict,  # Default: no prefixes
+                instantiation_property="http://www.w3.org/1999/02/22-rdf-syntax-ns#type")  # Default rdf:type
+
+output_file = "shaper_bibframe.shex"
+
+shaper.shex_graph(output_file=output_file,
+                  acceptance_threshold=0.8)
+
+print("Done!")
+
 ```
 
 ## References
